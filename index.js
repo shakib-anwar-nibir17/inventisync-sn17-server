@@ -21,6 +21,7 @@ const client = new MongoClient(uri, {
 });
 
 const userCollection = client.db("inventoryDB").collection("users");
+const shopCollection = client.db("inventoryDB").collection("shops");
 
 async function run() {
   try {
@@ -43,6 +44,41 @@ run().catch(console.dir);
 // get users
 app.get("/users", async (req, res) => {
   const result = await userCollection.find().toArray();
+  res.send(result);
+});
+
+// get a specific user
+app.get("/users/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const result = await userCollection.find(query).toArray();
+  console.log(result);
+  res.send(result);
+});
+
+// update user info
+app.put("/users/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const updatedUserInfo = req.body;
+  const options = { upsert: true };
+  const UpdatedDoc = {
+    $set: {
+      role: "manager",
+      shop_id: updatedUserInfo.shop_id,
+      shop_name: updatedUserInfo.shop_name,
+      shop_logo: updatedUserInfo.shop_logo,
+    },
+  };
+  const result = await userCollection.updateOne(query, UpdatedDoc, options);
+  res.send(result);
+});
+
+// shop related api
+
+app.post("/shops", async (req, res) => {
+  const shopInfo = req.body;
+  const result = await shopCollection.insertOne(shopInfo);
   res.send(result);
 });
 
