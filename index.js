@@ -49,6 +49,20 @@ app.post("/jwt", async (req, res) => {
   res.send({ token });
 });
 
+const verifyToken = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  const token = req.headers.authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_SECRET_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 // user related apis ------------------------------------------
 
 // get users
@@ -64,6 +78,21 @@ app.get("/users/:email", async (req, res) => {
   const result = await userCollection.find(query).toArray();
   console.log(result);
   res.send(result);
+});
+
+// verify shopOwner
+app.get("/users/manager/:email", verifyToken, async (req, res) => {
+  const email = req.params.email;
+  if (email !== req.decoded.email) {
+    return req.status(403).send({ message: "forbidden access" });
+  }
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  let manager = false;
+  if (user) {
+    manager = user?.role === "manager";
+  }
+  res.send({ manager });
 });
 
 // update user info
