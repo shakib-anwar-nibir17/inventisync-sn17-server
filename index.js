@@ -193,6 +193,35 @@ app.get("/products", async (req, res) => {
   res.send(result);
 });
 
+//get a specific product
+app.get("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await productCollection.findOne(query);
+  res.send(result);
+});
+
+// update a single product
+app.put("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedProduct = req.body;
+  const filter = { _id: new ObjectId(id) };
+  const UpdateDoc = {
+    $set: {
+      details: updatedProduct.details,
+      discount: updatedProduct.discount,
+      product_name: updatedProduct.product_name,
+      production_cost: updatedProduct.production_cost,
+      product_location: updatedProduct.product_location,
+      profit: updatedProduct.profit,
+      product_quantity: updatedProduct.product_quantity,
+      image: updatedProduct.image,
+      selling_price: updatedProduct.sellingPrice,
+    },
+  };
+  const result = await productCollection.updateOne(filter, UpdateDoc);
+  res.send(result);
+});
 // home ------------------------------------------------
 
 app.get("/", (req, res) => {
