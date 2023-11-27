@@ -23,6 +23,7 @@ const client = new MongoClient(uri, {
 
 const userCollection = client.db("inventoryDB").collection("users");
 const shopCollection = client.db("inventoryDB").collection("shops");
+const productCollection = client.db("inventoryDB").collection("products");
 
 async function run() {
   try {
@@ -63,22 +64,17 @@ const verifyToken = (req, res, next) => {
   });
 };
 
-// user related apis ------------------------------------------
-
-// get users
-app.get("/users", async (req, res) => {
-  const result = await userCollection.find().toArray();
-  res.send(result);
-});
-
-// get a specific user
-app.get("/users/:email", async (req, res) => {
-  const email = req.params.email;
+// use verify admin after verifyToken
+const verifyShopOwner = async (req, res, next) => {
+  const email = req.decoded.email;
   const query = { email: email };
-  const result = await userCollection.find(query).toArray();
-  console.log(result);
-  res.send(result);
-});
+  const user = await userCollection.findOne(query);
+  const isManager = user?.role === "manager";
+  if (!isManager) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
 
 // verify shopOwner
 app.get("/users/manager/:email", verifyToken, async (req, res) => {
@@ -93,6 +89,22 @@ app.get("/users/manager/:email", verifyToken, async (req, res) => {
     manager = user?.role === "manager";
   }
   res.send({ manager });
+});
+
+// user related apis ------------------------------------------
+
+// get users
+app.get("/users", async (req, res) => {
+  const result = await userCollection.find().toArray();
+  res.send(result);
+});
+
+// get a specific user
+app.get("/users/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const result = await userCollection.find(query).toArray();
+  res.send(result);
 });
 
 // update user info
@@ -113,14 +125,6 @@ app.put("/users/:email", async (req, res) => {
   res.send(result);
 });
 
-// shop related api
-
-app.post("/shops", async (req, res) => {
-  const shopInfo = req.body;
-  const result = await shopCollection.insertOne(shopInfo);
-  res.send(result);
-});
-
 // post a new user
 app.post("/users", async (req, res) => {
   const user = req.body;
@@ -138,6 +142,54 @@ app.delete("/users/:id", async (req, res) => {
   const id = req.params.id;
   const query = { _id: new ObjectId(id) };
   const result = await userCollection.deleteOne(query);
+  res.send(result);
+});
+
+// shop related api -----------------------------------------
+
+// create shop
+app.post("/shops", async (req, res) => {
+  const shopInfo = req.body;
+  const result = await shopCollection.insertOne(shopInfo);
+  res.send(result);
+});
+
+// get shop
+app.get("/shops", async (req, res) => {
+  const email = req.query.email;
+  const query = { email: email };
+  const result = await shopCollection.find(query).toArray();
+  res.send(result);
+});
+
+// patch shop data
+app.patch("/shop/:id", verifyToken, async (req, res) => {
+  const id = req.params.id;
+  const updatedCount = req.body;
+  const filter = { _id: new ObjectId(id) };
+  const UpdatedDoc = {
+    $set: {
+      product_count: updatedCount.product_count,
+    },
+  };
+  const result = await shopCollection.updateOne(filter, UpdatedDoc);
+  res.send(result);
+});
+
+// product related api -----------------------------
+
+// add a product
+app.post("/products", verifyToken, async (req, res) => {
+  const product = req.body;
+  const result = await productCollection.insertOne(product);
+  res.send(result);
+});
+
+// get products
+app.get("/products", async (req, res) => {
+  const email = req.query.email;
+  const query = { email: email };
+  const result = await productCollection.find(query).toArray();
   res.send(result);
 });
 
