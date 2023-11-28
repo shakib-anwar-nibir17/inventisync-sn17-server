@@ -78,19 +78,24 @@ const verifyShopOwner = async (req, res, next) => {
 };
 
 // verify shopOwner
-app.get("/users/manager/:email", verifyToken, async (req, res) => {
-  const email = req.params.email;
-  if (email !== req.decoded.email) {
-    return req.status(403).send({ message: "forbidden access" });
+app.get(
+  "/users/manager/:email",
+  verifyToken,
+  verifyShopOwner,
+  async (req, res) => {
+    const email = req.params.email;
+    if (email !== req.decoded.email) {
+      return req.status(403).send({ message: "forbidden access" });
+    }
+    const query = { email: email };
+    const user = await userCollection.findOne(query);
+    let manager = false;
+    if (user) {
+      manager = user?.role === "manager";
+    }
+    res.send({ manager });
   }
-  const query = { email: email };
-  const user = await userCollection.findOne(query);
-  let manager = false;
-  if (user) {
-    manager = user?.role === "manager";
-  }
-  res.send({ manager });
-});
+);
 
 // user related apis ------------------------------------------
 
@@ -149,14 +154,14 @@ app.delete("/users/:id", async (req, res) => {
 // shop related api -----------------------------------------
 
 // create shop
-app.post("/shops", async (req, res) => {
+app.post("/shops", verifyToken, async (req, res) => {
   const shopInfo = req.body;
   const result = await shopCollection.insertOne(shopInfo);
   res.send(result);
 });
 
 // get shop
-app.get("/shops", async (req, res) => {
+app.get("/shops", verifyToken, async (req, res) => {
   const email = req.query.email;
   const query = { email: email };
   const result = await shopCollection.find(query).toArray();
@@ -187,7 +192,7 @@ app.post("/products", verifyToken, async (req, res) => {
 });
 
 // get products
-app.get("/products", async (req, res) => {
+app.get("/products", verifyToken, verifyShopOwner, async (req, res) => {
   const email = req.query.email;
   const query = { email: email };
   const result = await productCollection.find(query).toArray();
@@ -255,6 +260,15 @@ app.delete("/products/:id", async (req, res) => {
 app.post("/sales", async (req, res) => {
   const summary = req.body;
   const result = await saleCollection.insertOne(summary);
+  res.send(result);
+});
+
+// get sales
+
+app.get("/sales", async (req, res) => {
+  const email = req.query.email;
+  const query = { email: email };
+  const result = await saleCollection.find(query).toArray();
   res.send(result);
 });
 
