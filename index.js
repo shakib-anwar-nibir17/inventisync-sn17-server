@@ -24,6 +24,7 @@ const client = new MongoClient(uri, {
 const userCollection = client.db("inventoryDB").collection("users");
 const shopCollection = client.db("inventoryDB").collection("shops");
 const productCollection = client.db("inventoryDB").collection("products");
+const saleCollection = client.db("inventoryDB").collection("sales");
 
 async function run() {
   try {
@@ -201,6 +202,21 @@ app.get("/products/:id", async (req, res) => {
   res.send(result);
 });
 
+// update specific field
+app.patch("/patch/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const newUpdate = req.body;
+  const filter = { _id: new ObjectId(id) };
+  const UpdateDoc = {
+    $set: {
+      product_quantity: newUpdate.product_quantity,
+      sale_count: newUpdate.sale_count,
+    },
+  };
+  const result = await productCollection.updateOne(filter, UpdateDoc);
+  res.send(result);
+});
+
 // update a single product
 app.put("/products/:id", async (req, res) => {
   const id = req.params.id;
@@ -230,6 +246,15 @@ app.delete("/products/:id", async (req, res) => {
   const query = { _id: new ObjectId(id) };
   const result = await productCollection.deleteOne(query);
   console.log(result);
+  res.send(result);
+});
+
+// sale-summary --------------------------------------
+
+// post summary
+app.post("/sales", async (req, res) => {
+  const summary = req.body;
+  const result = await saleCollection.insertOne(summary);
   res.send(result);
 });
 
