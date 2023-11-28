@@ -216,12 +216,23 @@ app.put("/products/:id", async (req, res) => {
       profit: updatedProduct.profit,
       product_quantity: updatedProduct.product_quantity,
       image: updatedProduct.image,
-      selling_price: updatedProduct.sellingPrice,
+      selling_price: updatedProduct.selling_price,
     },
   };
   const result = await productCollection.updateOne(filter, UpdateDoc);
   res.send(result);
 });
+
+// delete a product
+
+app.delete("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await productCollection.deleteOne(query);
+  console.log(result);
+  res.send(result);
+});
+
 // home ------------------------------------------------
 
 app.get("/", (req, res) => {
