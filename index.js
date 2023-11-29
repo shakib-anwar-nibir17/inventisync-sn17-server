@@ -196,6 +196,7 @@ app.get("/shops", verifyToken, async (req, res) => {
 app.patch("/shop/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const updatedCount = req.body;
+  console.log(updatedCount);
   const filter = { _id: new ObjectId(id) };
   const UpdatedDoc = {
     $set: {
