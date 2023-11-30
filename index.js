@@ -26,6 +26,7 @@ const userCollection = client.db("inventoryDB").collection("users");
 const shopCollection = client.db("inventoryDB").collection("shops");
 const productCollection = client.db("inventoryDB").collection("products");
 const saleCollection = client.db("inventoryDB").collection("sales");
+const reviewCollection = client.db("inventoryDB").collection("reviews");
 
 async function run() {
   try {
@@ -67,6 +68,69 @@ const verifyToken = (req, res, next) => {
 };
 
 // use verify admin after verifyToken
+const verifyAdmin = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  const isAdmin = user?.role === "admin";
+  if (!isAdmin) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
+
+// admin verify
+app.get("/users/admin/:email", verifyToken, async (req, res) => {
+  const email = req.params.email;
+  if (req.decoded.email !== email) {
+    res.send({ admin: false });
+  }
+  const query = { email: email };
+  const user = await userCollection.findOne(query);
+  const result = {
+    admin: user?.role === "admin",
+  };
+  res.send(result);
+});
+
+// admin routes
+app.get("/admin/shops", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await shopCollection.find().toArray();
+  res.send(result);
+});
+
+// get users
+app.get("/admin/users", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await userCollection.find().toArray();
+  res.send(result);
+});
+
+app.get("/admin/products", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await productCollection.find().toArray();
+  res.send(result);
+});
+
+app.get("/admin/sales", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await saleCollection.find().toArray();
+  res.send(result);
+});
+
+app.patch("/admin-income", async (req, res) => {
+  const id = process.env.ADMIN_ID;
+  const total = req.body;
+  const query = { _id: new ObjectId(id) };
+  const UpdateDoc = {
+    $inc: {
+      income: total.income,
+    },
+  };
+  const result = await userCollection.updateOne(query, UpdateDoc);
+  res.send(result);
+});
+
+//--------------------------------------------------//
+
+// use verify shopOwner after verifyToken
 const verifyShopOwner = async (req, res, next) => {
   const email = req.decoded.email;
   const query = { email: email };
@@ -100,12 +164,6 @@ app.get(
 
 //----------------payment related api ------------------------------
 
-//----------------dummy------
-
-app.post("/dummy", async (req, res) => {
-  res.send("dummy found");
-});
-
 // payment
 app.post("/create-payment-intent", async (req, res) => {
   const { price } = req.body;
@@ -122,12 +180,6 @@ app.post("/create-payment-intent", async (req, res) => {
 });
 
 // user related apis ------------------------------------------
-
-// get users
-app.get("/users", async (req, res) => {
-  const result = await userCollection.find().toArray();
-  res.send(result);
-});
 
 // get a specific user
 app.get("/users/:email", async (req, res) => {
@@ -217,7 +269,7 @@ app.post("/products", verifyToken, async (req, res) => {
 });
 
 // get products
-app.get("/products", verifyToken, verifyShopOwner, async (req, res) => {
+app.get("/products", verifyToken, async (req, res) => {
   const email = req.query.email;
   const query = { email: email };
   const result = await productCollection.find(query).toArray();
@@ -290,13 +342,23 @@ app.post("/sales", async (req, res) => {
 
 // get sales
 
-app.get("/sales", async (req, res) => {
+app.get("/sales", verifyToken, async (req, res) => {
   const email = req.query.email;
   const query = { email: email };
   const result = await saleCollection.find(query).toArray();
   res.send(result);
 });
 
+// review ----------------------------
+
+app.get("/reviews", async (req, res) => {
+  const cursor = reviewCollection.find();
+  const result = await cursor.toArray();
+  console.log(result);
+  res.send(result);
+});
+
+// okay from here
 // home ------------------------------------------------
 
 app.get("/", (req, res) => {
